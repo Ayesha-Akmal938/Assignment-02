@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.idea/
+.vscode/
+*.log
+
+# Training data (too large for git)
+Training/
+
+# Model files (binary, can be regenerated)
+models/*.pkl
+
+# Static generated files
+static/*.png

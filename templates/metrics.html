@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Model Performance Metrics – Gender Classification</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+
+    /* ── Header ── */
+    header {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      padding: 20px 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-left h1 { font-size: 2rem; color: #e94560; }
+    .header-left p  { color: #a0a0b0; margin-top: 6px; }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      background: rgba(233,69,96,0.15);
+      border: 1px solid rgba(233,69,96,0.5);
+      border-radius: 8px;
+      color: #e94560;
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .nav-btn:hover { background: rgba(233,69,96,0.28); transform: translateY(-1px); }
+
+    /* ── Layout ── */
+    .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+
+    /* ── Warning ── */
+    .warning {
+      background: rgba(255,165,0,0.15);
+      border: 1px solid rgba(255,165,0,0.4);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      color: #ffa500;
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 1.4rem;
+      color: #e94560;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* ── Summary cards (accuracy row) ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+    .summary-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .summary-card:hover { transform: translateY(-3px); }
+    .summary-card.best { border-color: #e94560; box-shadow: 0 0 20px rgba(233,69,96,0.3); }
+    .summary-card .model-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #e94560;
+      margin-bottom: 16px;
+    }
+    .big-number {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: #e0e0e0;
+      line-height: 1;
+    }
+    .big-label { font-size: 0.85rem; color: #a0a0b0; margin-top: 6px; }
+    .best-badge {
+      display: inline-block;
+      background: #e94560;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .acc-bar-bg {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+    .acc-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #e94560, #ff6b8a);
+      border-radius: 4px;
+      transition: width 0.8s ease;
+    }
+
+    /* ── Metrics table per model ── */
+    .metrics-section { margin-bottom: 48px; }
+    .model-block {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .model-block h3 {
+      font-size: 1.15rem;
+      color: #e94560;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      color: #a0a0b0;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,0.04); }
+    .row-label { color: #c0c0d0; font-weight: 500; }
+    .macro-row td { color: #e94560; font-weight: 600; }
+
+    /* metric pill */
+    .metric-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .pill-high   { background: rgba(72,199,142,0.2); color: #48c78e; border: 1px solid #48c78e; }
+    .pill-mid    { background: rgba(255,193,7,0.2);  color: #ffc107; border: 1px solid #ffc107; }
+    .pill-low    { background: rgba(233,69,96,0.2);  color: #e94560; border: 1px solid #e94560; }
+
+    /* mini bar inside table */
+    .mini-bar-bg {
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      height: 6px;
+      width: 100%;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #e94560, #ff6b8a);
+    }
+
+    /* ── Confusion matrices ── */
+    .cm-section { margin-bottom: 48px; }
+    .cm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .cm-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+    }
+    .cm-card h4 { color: #e94560; margin-bottom: 14px; font-size: 1rem; }
+    .cm-card img { max-width: 100%; border-radius: 8px; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+      font-size: 0.88rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>📊 Model Performance Metrics</h1>
+    <p>Accuracy &nbsp;|&nbsp; Precision &nbsp;|&nbsp; Recall &nbsp;|&nbsp; F1 Score &nbsp;|&nbsp; Confusion Matrices</p>
+  </div>
+  <a href="/" class="nav-btn">← Back to Classifier</a>
+</header>
+
+<div class="container">
+
+  {% if not trained %}
+  <div class="warning">
+    ⚠️ No model results found. Please run <code>python train_models.py</code> first to train the models.
+  </div>
+  {% else %}
+
+  <!-- ── Accuracy Overview ── -->
+  <h2 class="section-title">Accuracy Overview</h2>
+  {% set best_model = namespace(name='', acc=0) %}
+  {% for name, data in metrics_data.items() %}
+    {% if data.accuracy > best_model.acc %}
+      {% set best_model.name = name %}
+      {% set best_model.acc  = data.accuracy %}
+    {% endif %}
+  {% endfor %}
+
+  <div class="summary-grid">
+    {% for name, data in metrics_data.items() %}
+    <div class="summary-card {% if name == best_model.name %}best{% endif %}">
+      <div class="model-name">
+        {{ name }}
+        {% if name == best_model.name %}<span class="best-badge">⭐ Best</span>{% endif %}
+      </div>
+      <div class="big-number">{{ data.accuracy }}%</div>
+      <div class="big-label">Test Accuracy</div>
+      <div class="acc-bar-bg">
+        <div class="acc-bar-fill" style="width: {{ data.accuracy }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Per-Model Metrics Tables ── -->
+  <div class="metrics-section">
+    <h2 class="section-title">Detailed Metrics per Model</h2>
+
+    <div class="legend">
+      <span style="color:#a0a0b0; font-weight:600;">Score colour guide:</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#48c78e"></span> ≥ 80% — Good</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ffc107"></span> 60–79% — Fair</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#e94560"></span> &lt; 60% — Needs improvement</span>
+    </div>
+
+    {% for name, data in metrics_data.items() %}
+    <div class="model-block">
+      <h3>{{ name }}
+        {% if name == best_model.name %}<span class="best-badge">⭐ Best Overall</span>{% endif %}
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class / Average</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1 Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cls in ['Female', 'Male'] %}
+          {% set row = data[cls] %}
+          <tr>
+            <td class="row-label">{{ cls }}</td>
+            <td>
+              {% set v = row.precision %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+            <td>
+              {% set v = row.recall %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+            <td>
+              {% set v = row.f1 %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+          </tr>
+          {% endfor %}
+          <!-- Macro average row -->
+          {% set macro = data['macro'] %}
+          <tr class="macro-row">
+            <td class="row-label">Macro Average</td>
+            <td>
+              {% set v = macro.precision %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+            <td>
+              {% set v = macro.recall %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+            <td>
+              {% set v = macro.f1 %}
+              <span class="metric-pill {% if v >= 80 %}pill-high{% elif v >= 60 %}pill-mid{% else %}pill-low{% endif %}">
+                {{ v }}%
+              </span>
+              <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:{{ v }}%"></div></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Confusion Matrices ── -->
+  <div class="cm-section">
+    <h2 class="section-title">Confusion Matrices</h2>
+    <div class="cm-grid">
+      {% for name, img_b64 in cms.items() %}
+      <div class="cm-card">
+        <h4>{{ name }}</h4>
+        <img src="data:image/png;base64,{{ img_b64 }}" alt="{{ name }} confusion matrix"/>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+</body>
+</html>

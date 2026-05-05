@@ -1,0 +1,7 @@
+{
+  "img_size": [
+    128,
+    128
+  ],
+  "feature_type": "hog"
+}
